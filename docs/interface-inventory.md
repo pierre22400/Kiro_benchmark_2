@@ -150,3 +150,23 @@ operations -> input_reader -> jsonl_parser -> timestamps
 operations -> timeline -> contracts payload
 cli (future) -> rendering -> output_writer.write_atomic | stdout
 ```
+
+
+## CLI adapter (`cli.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| process → `cli` | `main(argv=None)` | optional argv; process stdin/stdout/stderr | contractual process status | usage, invalid-output-target, local-io, invalid-jsonl, event-not-found | delegates only authorized output writing |
+
+The adapter owns argparse grammar, help, request construction, output preflight, one operation invocation, rendering, stream emission, and exit mapping. It owns no parsing, validation, timeline, redaction, or output-write implementation.
+
+## Final call graph
+
+```text
+process -> cli.main
+  -> output_writer.preflight_target (optional)
+  -> operations.execute -> input_reader -> jsonl_parser -> timestamps
+                       -> timeline / schema payload
+  -> rendering -> redaction (text summarize/explain only)
+  -> stdout OR output_writer.write_atomic
+```
