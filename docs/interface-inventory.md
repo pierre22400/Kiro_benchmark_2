@@ -36,3 +36,35 @@ operations (future) -> contracts.Event / payload / Failure
 parser (future) -> contracts.Event / RecordError
 rendering (future) -> contracts.payload_dict
 ```
+
+
+## Timestamp normalization (`timestamps.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `timestamps` → `jsonl_parser` | `normalize_timestamp(value: str)` | source timestamp string | `(normalized_utc: str, comparison_instant: datetime)` | `InvalidTimestamp` for every unsupported or unreal date/time form | none |
+
+The normalized string is UTC with zero fractional digits only when the microsecond value is zero; the returned instant is timezone-aware and is the sole timestamp sort component.
+
+## Updated call graph
+
+```text
+jsonl_parser (future) -> timestamps.normalize_timestamp -> (normalized UTC string, aware instant)
+jsonl_parser (future) -> contracts.Event
+```
+
+
+## Safe input reader (`input_reader.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `input_reader` → `operations` | `iter_input_lines(input_path, stdin)` | local input path or `-`, supplied stdin stream | lazy `PhysicalLine(number, text)` iterator | `LocalIOFailure` for missing/unsafe/unreadable/undecodable local input | input read only; no mutation |
+
+The reader owns local-file and stdin selection. It rejects a symlink target or existing symlink ancestor before opening a local file and strips only CRLF/LF terminators.
+
+## Updated call graph
+
+```text
+operations (future) -> input_reader.iter_input_lines -> PhysicalLine
+operations (future) -> jsonl_parser.parse_record -> contracts.Event | RecordError
+```
