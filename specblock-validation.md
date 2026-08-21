@@ -2,28 +2,21 @@
 
 ## Source validée
 
-- Source normative demandée : `specblock` au commit `029ee68bdc1087e0186ec2f75d87751f73f7f40c`.
+- Source normative : `specblock` au commit `c3a9c34885f07efb10aa44ce6e1658abe60d8140` (« Revise SpecBlock to version 3 for Evidence Timeline CLI »).
 - Fichier de travail : `specblock`.
-- Résultat : le fichier de travail est identique au blob source `9b8c5f1e1072fda9288fdafebc361271868e4686`.
-- Aucune implémentation ni aucun artefact de spécification (`requirements.md`, `design.md`, `tasks.md`) n’existait lors de cette validation.
+- Résultat d’intégrité : le fichier est exactement identique à la source Git (`git diff --exit-code c3a9c34885f07efb10aa44ce6e1658abe60d8140 -- specblock` sans sortie) et son JSON est syntaxiquement valide avec Python 3.11.15.
 
-## Exigences EARS reconnues
+## Cohérence EARS validée
 
-Le SpecBlock impose un CLI local Python, one-shot, fondé sur la bibliothèque standard, sans réseau, serveur, persistance, cache, configuration globale, plugin ou effets à l’import. Il doit proposer `validate`, `summarize`, `explain` et `schema`, lire des événements JSONL, valider, filtrer, trier, construire une timeline par `case_id`, pouvoir rédiger la sortie humaine et rendre du texte ou du JSON de façon déterministe.
+Le SpecBlock v3 définit sans lacune publique connue :
 
-La spécification exige aussi des contrats stricts pour l’aide, les flux stdout/stderr, les codes de sortie, l’opérande stdin `-`, le traitement de `--output`, la non-modification de l’entrée et la séparation entre la surface CLI et le cœur métier testable sans `argparse`.
+1. **Surface CLI** — les quatre commandes exactes, toutes les options autorisées, leurs valeurs/défauts, l’interdiction des abréviations, les erreurs d’usage et les aides stables.
+2. **Données d’entrée** — l’objet `Event` fermé, ses champs et types, les sévérités et rangs, les timestamps RFC3339 acceptés et normalisés, les règles JSONL UTF-8, les lignes physiques et l’unicité globale de `event_id`.
+3. **Validation** — les quatre codes `RecordError`, les payloads de validation exacts, les compteurs, l’ordre, ainsi que les comportements distincts de `validate`, `summarize` et `explain` devant une entrée invalide.
+4. **Domaine et filtres** — `EventView`, l’ordre déterministe, les filtres `summarize` par AND, les résumés de cas, le contexte exact de `explain` et les payloads associés.
+5. **Rendu** — les formats texte et JSON canoniques, le schéma exposé, la règle de nouvelle ligne et les contraintes de déterminisme.
+6. **Rédaction** — portée texte, séquence des remplacements et expressions régulières exactes.
+7. **E/S et erreurs** — stdin, cibles de sortie, créations de parents, refus des liens symboliques, remplacement atomique, erreurs publiques et leur préséance.
+8. **Architecture** — séparation CLI, normalisation de requête, parsing, validation, filtrage, timeline, rédaction, rendu et écriture ; contrats d’interface obligatoires avant la génération de tâches ou de code.
 
-## Bloqueurs à résoudre avant requirements, design, tasks et code
-
-Le SpecBlock ne fournit pas les informations nécessaires pour produire des artefacts cohérents sans inventer de comportement :
-
-1. `domain_contracts.command_contracts`, auquel la règle de JSONL invalide renvoie, est vide. La politique par commande (arrêt ou continuation, sortie partielle, diagnostics, code de sortie et plusieurs erreurs) est donc inconnue.
-2. Le contrat canonique d’un événement est absent : champs requis, types, niveaux de sévérité, format et normalisation du timestamp, nullabilité et unicité ne sont pas définis. La sortie de `schema` ne peut donc pas être déterminée.
-3. L’interface CLI par commande est incomplète : applicabilité des filtres, de `--output` et de `--redact`, valeurs et défaut de `--format`, sémantique des filtres et portée de la rédaction JSON ne sont pas précisées.
-4. Les rendus et cas limites sont indéterminés : forme texte/JSON, encodage et nouvelle ligne, contexte local de `explain`, événement absent ou dupliqué, égalité de clés de tri et timestamps non normalisables.
-5. La politique de fichier de sortie et les motifs/seuils de rédaction ne sont pas définis : écrasement, écriture atomique, répertoires absents, encodage, définition d’un token long et d’un identifiant hexadécimal long.
-6. L’aide globale contient une règle permissive sur les fragments stables qui paraît moins stricte que l’objectif exigeant l’identification des quatre sous-commandes.
-
-## Décision requise
-
-Aucune exigence dérivée, aucun design, aucune tâche et aucun code ne sera généré tant que ces six points ne seront pas tranchés publiquement. Une décision peut soit compléter le SpecBlock, soit fournir un contrat explicite couvrant ces points.
+Les six ambiguïtés consignées dans la précédente validation v2 sont résolues par cette révision. Il est donc permis de produire, dans l’ordre, `requirements.md`, `design.md` et `tasks.md`. Aucun code ne sera généré avant leur validation et leurs checkpoints Git respectifs.
