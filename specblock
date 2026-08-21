@@ -1,52 +1,35 @@
 {
-  "title": "Evidence Timeline CLI - natural spec v2 EARS",
-  "summary": "Import-safe Python standard-library-only local CLI that reads a JSONL event log, validates records, reconstructs a deterministic timeline for each case, and produces a concise text or JSON report.",
-  "spec_version": "21/08/2026",
-  "comment_human": "Treat functional_objectives, non_functional_constraints, help_contract, behavior_contract, and architectural_objectives as the complete normative source. This SpecBlock is intentionally outside the canonical families. The prototype SHALL NOT be treated as a workspace_entity_lifecycle, workspace_dataset_lifecycle, workspace_task_lifecycle, local_forge_issue_lifecycle, or local_document_extractor_lifecycle application. It is a one-shot CLI for reading, validating, sorting, filtering, optionally redacting, and summarizing JSONL events. Add no workspace architecture, persistent database, server, network dependency, plugin system, global configuration, or cache.",
-  "target_audience": "A technical user who wants to inspect an application, audit, or incident event stream quickly without opening a database or starting a service.",
-  "deployment_context": "Local command-line execution without network access, without a server, without mandatory persistent state, and using only local text files or standard input.",
+  "title": "Evidence Timeline CLI - natural spec v3 EARS resolved",
+  "summary": "Import-safe Python 3.11 standard-library-only local CLI with four commands for validating a JSONL event stream, building deterministic case timelines, explaining one event in local context, and displaying the event schema. Exact event, CLI, filtering, ordering, rendering, redaction, error, and output-file contracts are normative.",
+  "comment_human": "Treat functional_objectives, non_functional_constraints, help_contract, behavior_contract, and architectural_objectives as the complete normative source. Preserve exactly the four commands, command options, event schema, payloads, ordering, filters, redaction rules, output-file policy, and error semantics declared here. The prototype is a one-shot local processor and SHALL NOT be treated as a workspace lifecycle, dataset lifecycle, task lifecycle, forge lifecycle, document extractor, persistent database, server, or plugin application. Add no command, option, field, severity, timestamp form, filter, output format, configuration surface, cache, network dependency, or persistent state.",
   "input_sources": [
-    "local JSONL file containing one JSON event per line",
-    "standard input when the input path is '-'",
-    "command-line filtering and formatting arguments"
+    "command-line parameters",
+    "local UTF-8 JSONL input file",
+    "UTF-8 JSONL from standard input when INPUT is '-'"
   ],
   "output_targets": [
-    "standard output for text reports, JSON reports, or schema diagnostics",
-    "standard error for argument, read, write, or invalid-JSON errors",
-    "optional local output file when --output is supplied"
+    "standard output",
+    "standard error",
+    "optional UTF-8 local output file selected by --output"
   ],
   "behavior_contract": {
     "default_behavior": {
       "when_no_args": "print_help_and_exit_0",
-      "stdout_notes": "WHEN no arguments are supplied, THE CLI_Entrypoint SHALL emit top-level help to stdout, emit nothing to stderr, return exit code 0, and read neither a file nor stdin."
-    },
-    "expected_error_behavior": {
-      "bad_user_input": "IF the user supplies invalid arguments, an unknown option, or an unknown subcommand, THEN THE CLI_Entrypoint SHALL return exit code 2 and emit a short message to stderr without a traceback.",
-      "missing_required_input": "IF a required argument such as input or --event-id is missing for the selected command, THEN THE CLI_Entrypoint SHALL return exit code 2, emit a short message to stderr, and perform no unnecessary file or stdin read.",
-      "invalid_path_or_resource": "IF an input or output path is missing or unreadable, or a read or write operation fails, THEN THE CLI_Entrypoint SHALL return exit code 2 and emit a short message to stderr. IF a JSONL record is invalid, THEN THE selected command SHALL apply the applicable rule declared in domain_contracts.command_contracts."
-    },
-    "success_behavior": {
-      "return_code": 0,
-      "stdout": "WHEN a command completes successfully without --output, THE CLI_Entrypoint SHALL emit only the expected command result to stdout.",
-      "stderr": "WHEN a command completes successfully, THE CLI_Entrypoint SHALL emit nothing to stderr.",
-      "artifacts": "WHERE --output is supplied and the command completes successfully, THE CLI SHALL create the requested output file. WHERE --output is not supplied, THE CLI SHALL create no output artifact."
+      "stdout_notes": "WHEN no arguments are supplied, THE CLI_Entrypoint SHALL emit top-level help to stdout, emit nothing to stderr, return exit code 0, and invoke no input or domain operation. WHEN a command result is emitted to stdout, THE CLI_Entrypoint SHALL emit only the declared result followed by exactly one LF newline. WHERE --output is supplied and writing succeeds, THE CLI_Entrypoint SHALL emit nothing to stdout or stderr. WHEN an expected failure other than validate finding invalid records is selected, THE CLI_Entrypoint SHALL emit exactly one declared error line to stderr, emit nothing to stdout, omit traceback and incidental exception text, and return the declared exit code."
     }
   },
   "help_contract": {
+    "no_args_behavior": "print_help_and_exit_0",
     "rc_semantics": {
       "help": 0,
       "no_args": 0,
-      "bad_args": 2
+      "bad_args": 2,
+      "unknown_subcommand": 2
     },
-    "no_args_behavior": "WHEN no arguments are supplied, THE CLI_Entrypoint SHALL display top-level help without reading stdin or any file.",
     "stable_fragments_all": [
       "usage:",
       "Evidence Timeline CLI",
-      "--help"
-    ],
-    "stable_fragments_any": [
-      "commands:",
-      "subcommands:",
+      "--help",
       "validate",
       "summarize",
       "explain",
@@ -56,69 +39,145 @@
       "validate": [
         "usage:",
         "validate",
-        "input"
+        "input",
+        "--format",
+        "--output"
       ],
       "summarize": [
         "usage:",
         "summarize",
         "input",
         "--format",
-        "--min-severity"
+        "--case-id",
+        "--actor",
+        "--min-severity",
+        "--tag",
+        "--redact",
+        "--output"
       ],
       "explain": [
         "usage:",
         "explain",
         "input",
-        "--event-id"
+        "--event-id",
+        "--format",
+        "--redact",
+        "--output"
       ],
       "schema": [
         "usage:",
-        "schema"
+        "schema",
+        "--format",
+        "--output"
       ]
-    },
-    "notes": "WHEN argparse uses wording variants such as 'options:' or 'optional arguments:', THE CLI SHALL still include the essential command fragments declared by this help_contract."
+    }
   },
   "functional_objectives": [
-    "THE CLI SHALL provide a validate command that checks JSONL syntax, required fields, and severity levels.",
-    "WHEN the user invokes the summarize command with valid input, THE CLI SHALL group events by case_id and produce a deterministic timeline for each case.",
-    "WHEN the user invokes the explain command with --event-id EVENT_ID, THE CLI SHALL locate the event whose event_id equals EVENT_ID and display its local context within the corresponding case timeline.",
-    "WHEN the user invokes the schema command, THE CLI SHALL display the minimum expected event contract.",
-    "WHERE a command supports event filtering, THE CLI SHALL accept the --case-id, --actor, --min-severity, and --tag filters when they are applicable to that command.",
-    "WHERE --redact is supplied, THE CLI SHALL mask email addresses, long tokens, and long hexadecimal identifiers in human-readable output.",
-    "WHEN two executions receive identical input content and identical arguments, THE CLI SHALL produce identical output.",
-    "WHEN the input operand equals '-', THE CLI SHALL read JSONL event records from stdin instead of opening a local input file.",
-    "WHEN a successful command is invoked without --output, THE CLI SHALL emit its text report, JSON report, schema diagnostic, or event context to stdout.",
-    "WHERE --output is supplied to a command that supports file output, THE CLI SHALL write the command result to the selected local output file.",
-    "IF the CLI receives an invalid argument, unknown option, unknown subcommand, missing required input, unreadable path, or local read or write failure, THEN THE CLI_Entrypoint SHALL emit a short user-readable error to stderr without traceback.",
-    "WHEN top-level help is displayed, THE CLI SHALL identify the validate, summarize, explain, and schema commands.",
-    "WHEN validate help is displayed, THE CLI SHALL include the fragments usage:, validate, and input.",
-    "WHEN summarize help is displayed, THE CLI SHALL include the fragments usage:, summarize, input, --format, and --min-severity.",
-    "WHEN explain help is displayed, THE CLI SHALL include the fragments usage:, explain, input, and --event-id.",
-    "WHEN schema help is displayed, THE CLI SHALL include the fragments usage: and schema."
+    "THE CLI SHALL expose exactly the commands validate, summarize, explain, and schema and SHALL display all four command names in top-level help.",
+    "THE CLI SHALL accept exactly these command forms: evidence-timeline validate INPUT [--format {text,json}] [--output OUTPUT_PATH]; evidence-timeline summarize INPUT [--format {text,json}] [--case-id CASE_ID] [--actor ACTOR] [--min-severity {debug,info,warning,error,critical}] [--tag TAG ...] [--redact] [--output OUTPUT_PATH]; evidence-timeline explain INPUT --event-id EVENT_ID [--format {text,json}] [--redact] [--output OUTPUT_PATH]; evidence-timeline schema [--format {text,json}] [--output OUTPUT_PATH].",
+    "THE CLI SHALL require every command option to occur after its command, SHALL reject option abbreviation and aliases, SHALL reject every undeclared option, and SHALL interpret -- as the end of option parsing.",
+    "THE CLI SHALL define --format with the exact values text and json and default text and SHALL define --output with default absent.",
+    "THE CLI SHALL permit --case-id, --actor, --min-severity, and one or more --tag occurrences only on summarize and SHALL permit --redact only on summarize and explain.",
+    "IF an invocation has a missing operand, extra operand, duplicate non-repeatable option, undeclared option, invalid --format value, invalid --min-severity value, unknown command, malformed option placement, or an option on a command that does not declare it, THEN THE CLI_Entrypoint SHALL emit exactly error: usage followed by one LF newline to stderr, emit nothing to stdout, read no input, and return exit code 2.",
+    "IF --redact and --format json are supplied together, THEN THE CLI_Entrypoint SHALL emit exactly error: usage followed by one LF newline to stderr, emit nothing to stdout, read no input, and return exit code 2.",
+    "THE CLI SHALL define one Event as an object having exactly the required keys event_id, case_id, timestamp, severity, actor, message, and tags and SHALL reject an object having a missing key or an additional key.",
+    "THE CLI SHALL require event_id, case_id, actor, and message to be JSON strings containing at least one Unicode code point and SHALL NOT trim, normalize, case-fold, or otherwise rewrite those values.",
+    "THE CLI SHALL require severity to be exactly one of the lowercase JSON strings debug, info, warning, error, and critical.",
+    "THE CLI SHALL define severity rank as debug=0, info=1, warning=2, error=3, and critical=4.",
+    "THE CLI SHALL require tags to be a JSON array of zero or more non-empty JSON strings and SHALL require every tag value to be unique by exact Unicode string equality within its Event.",
+    "THE CLI SHALL allow no null value in an Event and SHALL treat a JSON boolean, number, object, array, or null in place of any declared string as an invalid Event.",
+    "THE CLI SHALL require timestamp to be an RFC3339 timestamp of exactly YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS.fractionZ, YYYY-MM-DDTHH:MM:SS+HH:MM, YYYY-MM-DDTHH:MM:SS-HH:MM, YYYY-MM-DDTHH:MM:SS.fraction+HH:MM, or YYYY-MM-DDTHH:MM:SS.fraction-HH:MM, with uppercase T and Z, a fraction of one through six decimal digits when present, a real Gregorian date and time, second from 00 through 59, and an offset from -23:59 through +23:59.",
+    "THE CLI SHALL reject a timestamp without an explicit Z or numeric offset and SHALL reject leap-second value 60.",
+    "WHEN a valid timestamp is loaded, THE CLI SHALL convert it to UTC and represent Normalized_Timestamp as YYYY-MM-DDTHH:MM:SSZ when UTC microseconds equal zero and as YYYY-MM-DDTHH:MM:SS.ffffffZ with exactly six fractional digits otherwise.",
+    "THE CLI SHALL require event_id to be unique by exact Unicode string equality across the complete input stream and SHALL treat every occurrence after the first occurrence of the same event_id as a duplicate-event-id record error.",
+    "THE CLI SHALL define one JSONL record as one physical line decoded as UTF-8, excluding the line terminator, and SHALL treat an empty or whitespace-only physical line as a blank-line record error rather than skipping it.",
+    "THE CLI SHALL accept CRLF or LF input line terminators and SHALL reject a file or stdin stream that cannot be decoded as UTF-8.",
+    "THE CLI SHALL require each nonblank physical line to contain exactly one finite JSON object and SHALL reject invalid JSON, a non-object top-level JSON value, and the non-standard numeric constants NaN, Infinity, and -Infinity.",
+    "THE CLI SHALL identify physical input lines by one-based LINE_NUMBER.",
+    "THE CLI SHALL use exactly these record error codes: blank-line, invalid-json, invalid-event, and duplicate-event-id.",
+    "WHEN validate reads the input, THE validate operation SHALL inspect every physical line in source order, SHALL retain no partial Event from an invalid line, and SHALL collect exactly one RecordError for each invalid physical line.",
+    "THE CLI SHALL define RecordError as exactly {\"code\":RECORD_ERROR_CODE,\"line\":LINE_NUMBER} and SHALL order RecordError values by increasing LINE_NUMBER.",
+    "WHEN validate finishes with no RecordError, THE validate operation SHALL return exactly ValidationPayload={\"errors\":[],\"records\":VALID_EVENT_COUNT,\"valid\":true} and return exit code 0.",
+    "WHEN validate finishes with one or more RecordError values, THE validate operation SHALL return exactly ValidationPayload={\"errors\":[RecordError],\"records\":VALID_EVENT_COUNT,\"valid\":false}, emit no diagnostic to stderr, and return exit code 1 after the complete payload has been emitted or written.",
+    "WHEN validate encounters a duplicate event_id, THE first structurally valid occurrence SHALL contribute to VALID_EVENT_COUNT and each later occurrence SHALL contribute one duplicate-event-id RecordError and SHALL NOT contribute to VALID_EVENT_COUNT.",
+    "IF summarize or explain encounters the first invalid physical line in source order, THEN THE selected operation SHALL stop reading after that line, emit exactly error: invalid-jsonl:LINE_NUMBER:RECORD_ERROR_CODE followed by one LF newline to stderr, emit nothing to stdout, create or modify no output file, and return exit code 1.",
+    "WHEN summarize or explain encounters a duplicate event_id, THE duplicate physical line rather than the first occurrence SHALL be the invalid line.",
+    "THE CLI SHALL define EventView as exactly {\"actor\":ACTOR,\"case_id\":CASE_ID,\"event_id\":EVENT_ID,\"message\":MESSAGE,\"severity\":SEVERITY,\"tags\":[TAG],\"timestamp\":NORMALIZED_TIMESTAMP} with tags preserved in input order.",
+    "THE CLI SHALL define Event_Order as ascending Normalized_Timestamp instant, then ascending exact Unicode case_id, then ascending exact Unicode event_id, without locale transformation, Unicode normalization, or case folding.",
+    "WHEN summarize loads a valid input, THE summarize operation SHALL apply every supplied filter with logical AND before grouping and ordering events.",
+    "WHERE --case-id CASE_ID is supplied, THE summarize operation SHALL retain only Events whose case_id exactly equals CASE_ID.",
+    "WHERE --actor ACTOR is supplied, THE summarize operation SHALL retain only Events whose actor exactly equals ACTOR.",
+    "WHERE --min-severity SEVERITY is supplied, THE summarize operation SHALL retain only Events whose severity rank is greater than or equal to the selected severity rank.",
+    "WHERE one or more --tag TAG values are supplied, THE summarize operation SHALL retain only Events whose tags contain every supplied distinct TAG by exact Unicode string equality.",
+    "THE CLI SHALL define CaseSummary as exactly {\"case_id\":CASE_ID,\"events\":[EventView],\"severity_counts\":{\"critical\":N,\"debug\":N,\"error\":N,\"info\":N,\"warning\":N}} with all five severity keys present, including zero counts.",
+    "WHEN summarize succeeds, THE summarize operation SHALL return exactly SummaryPayload={\"cases\":[CaseSummary],\"event_count\":N}, SHALL order cases by ascending exact Unicode case_id, SHALL order each events array by Event_Order, and SHALL set N to the total number of retained Events.",
+    "WHEN no Event remains after summarize filtering, THE summarize operation SHALL return exactly {\"cases\":[],\"event_count\":0} and return exit code 0.",
+    "WHEN explain loads a valid input and exactly one Event has event_id equal to EVENT_ID, THE explain operation SHALL sort all Events of that Event's case by Event_Order and return the target Event, its immediate predecessor when one exists, and its immediate successor when one exists.",
+    "THE CLI SHALL define ExplainPayload as exactly {\"case_id\":CASE_ID,\"events\":[EventView],\"target_event_id\":EVENT_ID}, SHALL order events by Event_Order, and SHALL include no Event from another case.",
+    "WHEN the explained Event is the only Event in its case, THE explain operation SHALL include exactly the target Event in ExplainPayload.events.",
+    "WHEN the explained Event is first or last in its case, THE explain operation SHALL include the target Event and only the one adjacent Event that exists.",
+    "IF explain loads a valid input containing no Event whose event_id equals EVENT_ID, THEN THE explain operation SHALL emit exactly error: event-not-found followed by one LF newline to stderr, emit nothing to stdout, create or modify no output file, and return exit code 1.",
+    "THE CLI SHALL resolve an event_id tie only through the duplicate-event-id invalid-input rule and SHALL NOT select one duplicate Event for explain.",
+    "THE CLI SHALL define SchemaPayload as exactly {\"additional_fields\":false,\"fields\":{\"actor\":\"non-empty string\",\"case_id\":\"non-empty string\",\"event_id\":\"non-empty globally unique string\",\"message\":\"non-empty string\",\"severity\":\"debug|info|warning|error|critical\",\"tags\":\"array of unique non-empty strings\",\"timestamp\":\"RFC3339 timestamp with Z or numeric offset\"},\"nullable_fields\":[],\"required\":[\"event_id\",\"case_id\",\"timestamp\",\"severity\",\"actor\",\"message\",\"tags\"]}.",
+    "WHEN schema is invoked, THE schema operation SHALL return exactly SchemaPayload, read no file or stdin, and return exit code 0.",
+    "WHEN --format json is selected, THE CLI_Entrypoint SHALL serialize the applicable ValidationPayload, SummaryPayload, ExplainPayload, or SchemaPayload using Canonical_JSON and append exactly one LF newline.",
+    "THE CLI SHALL define Canonical_JSON as UTF-8 JSON serialized with ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(\",\",\":\"), and no serializer-owned trailing newline.",
+    "WHEN validate --format text completes, THE CLI_Entrypoint SHALL emit exactly valid: true followed by LF and records: N followed by LF when valid, or valid: false followed by LF, records: N followed by LF, and one line line LINE_NUMBER: RECORD_ERROR_CODE for every RecordError in order when invalid.",
+    "WHEN summarize --format text returns no Event, THE CLI_Entrypoint SHALL emit exactly No events. followed by one LF newline.",
+    "WHEN summarize --format text returns Events, THE CLI_Entrypoint SHALL emit each case in case order as one header line case CASE_ID (N events), followed immediately by one line per Event in Event_Order formatted NORMALIZED_TIMESTAMP [SEVERITY] EVENT_ID actor=ACTOR tags=TAG_LIST MESSAGE, with TAG_LIST equal to - when tags is empty and otherwise the comma-joined tags in input order, and SHALL place no blank line between cases.",
+    "WHEN explain --format text succeeds, THE CLI_Entrypoint SHALL emit the ExplainPayload Events in Event_Order using the summarize Event line format, prefixed by > and one space for the target Event and by two spaces for each context Event.",
+    "WHEN schema --format text succeeds, THE CLI_Entrypoint SHALL emit exactly seven field lines in this order: event_id: non-empty globally unique string; case_id: non-empty string; timestamp: RFC3339 timestamp with Z or numeric offset; severity: debug|info|warning|error|critical; actor: non-empty string; message: non-empty string; tags: array of unique non-empty strings; with each field line terminated by LF.",
+    "WHERE --redact is absent, THE CLI SHALL preserve every Event string exactly except timestamp normalization and format syntax.",
+    "WHERE --redact is supplied with text format, THE CLI_Entrypoint SHALL apply redaction to case_id, event_id, actor, message, and every tag only after filtering, grouping, ordering, event lookup, and payload construction and before text rendering.",
+    "THE CLI SHALL apply redaction replacements from left to right in this exact order: email, hexadecimal identifier, then long token.",
+    "THE CLI SHALL define an email match through the Python regular expression (?i)(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}(?![A-Z0-9.-]) and SHALL replace each non-overlapping match with [REDACTED_EMAIL].",
+    "THE CLI SHALL define a hexadecimal identifier match through the Python regular expression (?i)(?<![0-9A-F])[0-9A-F]{16,}(?![0-9A-F]) and SHALL replace each non-overlapping match with [REDACTED_HEX].",
+    "THE CLI SHALL define a long token match through the Python regular expression (?<![A-Za-z0-9_-])[A-Za-z0-9_-]{24,}(?![A-Za-z0-9_-]) and SHALL replace each non-overlapping match with [REDACTED_TOKEN].",
+    "WHEN redaction changes a case_id used in a summarize text header, THE CLI_Entrypoint SHALL use the same redacted case_id in every Event line for that case.",
+    "WHEN --output is absent, THE CLI_Entrypoint SHALL emit the declared result to stdout and SHALL create no output file.",
+    "WHEN --output OUTPUT_PATH is supplied and the selected operation obtains a complete result, THE CLI_Entrypoint SHALL fully render and UTF-8 encode the result before opening or creating any output target, SHALL append exactly one LF newline as declared for stdout, SHALL write the identical result bytes to OUTPUT_PATH, and SHALL emit nothing to stdout or stderr.",
+    "WHEN OUTPUT_PATH is relative, THE CLI_Entrypoint SHALL resolve it once against the invocation-start current working directory.",
+    "WHEN a valid OUTPUT_PATH has missing parent directories, THE output operation SHALL create those parents only after input processing and result rendering have succeeded.",
+    "IF OUTPUT_PATH identifies an existing directory, a symlink, or a path traversing an existing symlink ancestor, THEN THE CLI_Entrypoint SHALL emit exactly error: invalid-output-target followed by one LF newline to stderr, emit nothing to stdout, leave the target tree unchanged, and return exit code 1.",
+    "IF OUTPUT_PATH identifies an existing regular non-symlink file, THEN the output operation SHALL atomically replace that file with the complete result bytes by writing a temporary sibling file and applying os.replace only after the temporary write succeeds.",
+    "IF creating a parent, writing the temporary file, flushing, closing, or replacing OUTPUT_PATH fails, THEN THE CLI_Entrypoint SHALL emit exactly error: local-io followed by one LF newline to stderr, emit nothing to stdout, preserve an existing OUTPUT_PATH file unchanged when replacement has not completed, remove any temporary sibling created by the operation when possible, and return exit code 1.",
+    "IF INPUT identifies a missing path, directory, unreadable file, symlink, or path traversing an existing symlink ancestor, or if INPUT cannot be decoded as UTF-8, THEN THE CLI_Entrypoint SHALL emit exactly error: local-io followed by one LF newline to stderr, emit nothing to stdout, create or modify no output file, and return exit code 1.",
+    "THE CLI SHALL use exactly these public non-usage error forms: error: invalid-jsonl:LINE_NUMBER:RECORD_ERROR_CODE; error: event-not-found; error: invalid-output-target; and error: local-io.",
+    "IF more than one non-usage expected failure is observable without performing a prohibited operation, THEN THE CLI SHALL select exactly one failure using this precedence: invalid-output-target; local-io for opening or decoding INPUT; invalid-jsonl; event-not-found; local-io for writing OUTPUT_PATH.",
+    "WHEN the requirements phase identifies an input without one consumer, an option without one command matrix entry, a success without one exact logical payload, or a mutation without one declared target and failure policy, THE requirements workflow SHALL stop before design and request clarification.",
+    "IF a public decision remains undefined, THEN THE requirements workflow SHALL NOT replace that decision with a placeholder, SHALL NOT defer it silently, and SHALL NOT generate design, tasks, or code."
   ],
   "non_functional_constraints": [
-    "THE CLI SHALL operate without network access.",
-    "THE CLI SHALL require no mandatory external dependency beyond the Python standard library.",
-    "WHEN any application module is imported, THE module SHALL perform no argument parsing, command execution, file read, stdin read, filesystem write, stream emission, network access, or subprocess execution.",
-    "THE CLI SHALL sort events deterministically by normalized timestamp, then case_id, then event_id.",
-    "WHEN an expected user-facing error occurs, THE CLI_Entrypoint SHALL emit a short readable message without a traceback.",
-    "WHEN JSON output is produced, THE CLI SHALL serialize object keys in sorted order wherever the selected JSON representation permits it.",
-    "THE CLI SHALL run on Windows and POSIX platforms.",
-    "WHILE any command is executing, THE CLI SHALL NOT modify the input file.",
-    "WHEN two executions receive identical input content and identical arguments, THE CLI SHALL produce equal exit codes, stdout content, stderr content, and output-file content.",
-    "WHILE a successful command result is emitted, THE CLI_Entrypoint SHALL emit no unrelated banner, debug line, progress line, log line, advisory prose, or duplicate result.",
-    "WHEN a command succeeds, THE CLI_Entrypoint SHALL return exit code 0 and emit nothing to stderr.",
-    "WHEN bad CLI arguments are detected, THE CLI_Entrypoint SHALL return exit code 2, emit the applicable short error to stderr, and emit no command result to stdout."
+    "THE CLI SHALL run on Python 3.11 or later using only the Python standard library.",
+    "WHILE a normal CLI operation is executing, THE CLI SHALL use no network access, subprocess execution, remote metadata, network-derived timestamp, server, database, or non-local service.",
+    "WHEN any application Module is imported, THE Module SHALL perform no argument parsing, command execution, stream emission, stdin read, file read, filesystem mutation, network access, or subprocess execution.",
+    "THE CLI SHALL define Equivalent_Invocation_Input as equality of argv, invocation-start current working directory, input bytes, stdin bytes when selected, and pre-existing OUTPUT_PATH state.",
+    "WHEN two invocations have Equivalent_Invocation_Input, THE CLI SHALL produce equal exit code, stdout bytes, stderr bytes, returned logical payload, and output-file bytes and effects.",
+    "WHILE a successful result is emitted, THE CLI_Entrypoint SHALL emit no banner, debug line, progress line, log line, advisory prose, or duplicate result.",
+    "WHEN no arguments, top-level --help, or command --help is invoked, THE CLI_Entrypoint SHALL write the applicable help to stdout, write nothing to stderr, return exit code 0, read no input, and invoke no domain operation.",
+    "WHEN an expected failure other than invalid validate records occurs, THE CLI_Entrypoint SHALL emit exactly one declared error line, emit no result payload, omit stack traces and incidental exception text, and return the contractually mapped exit code.",
+    "WHILE validate, summarize, explain, or schema is executing without --output, THE CLI SHALL create, modify, replace, rename, or remove no filesystem entry.",
+    "WHEN input processing, validation, event lookup, output-target validation, result rendering, or output encoding fails before a write is authorized, THE CLI SHALL leave OUTPUT_PATH and its parent tree unchanged.",
+    "THE CLI SHALL compare event_id, case_id, actor, and tag values by exact Unicode code-point sequence without locale transformation, Unicode normalization, trimming, or case folding.",
+    "THE CLI SHALL use timezone-aware datetime arithmetic for timestamp comparison and SHALL NOT order timestamps by their unnormalized source text.",
+    "WHEN multiple Events have equal normalized timestamp instants, THE CLI SHALL resolve order by exact case_id and then exact event_id, making source-file order irrelevant to the final order.",
+    "WHEN --format text and --format json are applied to the same successful operation and state without --redact, THE two outputs SHALL represent the same logical payload and differ only in declared rendering syntax.",
+    "THE CLI SHALL require no hidden mock, fabricated remote service, environment-specific locale, global configuration, cache, or persistent application state for any command.",
+    "WHEN an automated checker invokes help, each valid command, stdin input, each filter, text and JSON rendering, redaction, an invalid record, an absent event, an invalid option, or output-file writing, THE observable command inventory, payload schema, ordering, exit code, stream destination, redaction, and filesystem effect SHALL equal this SpecBlock."
   ],
   "architectural_objectives": [
-    "THE generated architecture SHALL clearly separate the CLI surface, JSONL parsing, business validation, filtering, timeline construction, redaction, and rendering responsibilities.",
-    "THE generated architecture SHALL keep the business core testable without invoking argparse.",
-    "THE generated architecture SHALL model the prototype as a one-shot processor and SHALL NOT use a workspace architecture or persistent database.",
-    "WHEN validation, filtering, timeline construction, redaction, and rendering share event data, THE generated architecture SHALL define consistent domain contracts across those responsibilities.",
-    "THE generated architecture SHALL preserve medium complexity through multiple commands and multiple output formats and SHALL NOT introduce a plugin system, global configuration, or cache.",
-    "WHILE the CLI_Entrypoint handles an invocation, THE CLI_Entrypoint SHALL own argument parsing, help handling, domain invocation, rendering, stdout and stderr emission, and exit-code mapping without embedding the business rules of JSONL validation, filtering, timeline construction, or redaction.",
-    "WHEN an internal operation succeeds, THE internal API SHALL return a logical result and SHALL NOT emit directly to stdout or stderr.",
-    "WHEN an interface between generated modules is defined during design, THE design SHALL reconcile its inputs, returned logical value, expected failures, and filesystem effects before tasks or code are generated."
-  ],
-  "domain_contracts": {}
+    "THE generated architecture SHALL separate the CLI surface, request normalization, JSONL parsing, event validation, filtering, timeline construction, redaction, rendering, and output-file writing into testable responsibilities.",
+    "THE generated architecture SHALL keep the business core testable without invoking argparse or importing the CLI entrypoint as an executing program.",
+    "THE generated architecture SHALL model the application as a one-shot processor and SHALL NOT introduce workspace state, persistent database state, global configuration, plugin loading, cache state, server state, or network abstractions.",
+    "WHILE the CLI_Entrypoint handles an invocation, THE CLI_Entrypoint SHALL own only argument parsing, help handling, normalized request construction, one application-operation invocation, rendering selection, stdout and stderr emission, output-file delegation, and exit-code mapping.",
+    "WHEN an internal operation succeeds, THE internal API SHALL return the exact logical payload declared by this SpecBlock and SHALL NOT return pre-rendered stdout or stderr text.",
+    "WHEN JSONL parsing and event validation report a RecordError, THE generated architecture SHALL preserve its one-based physical line number and exact public record error code across validate, summarize, and explain.",
+    "WHEN filtering, timeline construction, explain lookup, rendering, and redaction consume Events, THE generated architecture SHALL use one shared Event and EventView contract rather than incompatible per-module representations.",
+    "WHEN timestamp parsing or comparison is required, THE generated architecture SHALL use one shared normalization implementation that returns the declared Normalized_Timestamp and timezone-aware comparison instant.",
+    "WHEN JSON serialization is required, THE generated architecture SHALL use one shared Canonical_JSON implementation rather than separate per-command serializers.",
+    "WHILE a read or render operation is executing, THE generated architecture SHALL provide no output-file write capability unless --output selected the pre-authorized OUTPUT_PATH.",
+    "WHEN --output selects a valid target and every input, domain, lookup, and rendering step succeeds, THE output writer SHALL be the sole owner of missing-parent creation, temporary sibling writing, and atomic os.replace.",
+    "WHEN an interface between generated modules is defined during design, THE design SHALL record the producing responsibility, consuming responsibility, action name, parameter names and types, return schema, expected failures, and filesystem effects before tasks or code are generated.",
+    "IF two planned modules assign different names, types, schemas, ordering, error codes, or effects to the same shared interface, THEN THE design workflow SHALL stop and reconcile the interface before task generation."
+  ]
 }
