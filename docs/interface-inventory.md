@@ -132,3 +132,21 @@ JSON uses the shared payload dictionary and canonical serializer settings. Text 
 | `output_writer` → `cli` | `write_atomic(plan, data)` | preflighted target and complete UTF-8 bytes | none | `OutputFailure(local-io|invalid-output-target)` | authorized parent creation, temporary sibling, atomic replace |
 
 Only this module has output-write capability. The CLI must preflight before input and call writing only after the full result bytes exist.
+
+
+## Application operations (`operations.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `operations` → `cli` | `execute(request, stdin)` | normalized `Request`, selected stdin stream | `OperationResult` or logical `Failure` | local-io, invalid-jsonl, event-not-found, usage | input read only |
+
+`validate` scans all records; `summarize` and `explain` stop after the first invalid record; `schema` never accesses input. The module never renders, emits, or writes output.
+
+## Updated call graph
+
+```text
+cli (future) -> output_writer.preflight_target -> operations.execute
+operations -> input_reader -> jsonl_parser -> timestamps
+operations -> timeline -> contracts payload
+cli (future) -> rendering -> output_writer.write_atomic | stdout
+```
