@@ -17,3 +17,22 @@ console script / python -m evidence_timeline
 ```
 
 Importing every listed module performs no argument parsing, stream emission, input read, filesystem mutation, network access, or subprocess execution.
+
+
+## Shared contracts (`contracts.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `contracts` → parser/timeline/rendering/operations | `Event`, `EventView`, `RecordError`, payload dataclasses, `Request`, `Failure`, `OperationResult` | immutable declared fields | one shared logical contract per public schema | none | none |
+| `contracts` → rendering | `payload_dict(payload)` | any `PublicPayload` | exact external dictionary shape | none | none |
+| `contracts` → operations | `event_view(event)` | validated `Event` | exact `EventView` | none | none |
+| `contracts` → operations/rendering | `schema_payload()` | none | exact `SchemaPayload` | none | none |
+
+## Updated call graph
+
+```text
+cli (future) -> contracts.Request
+operations (future) -> contracts.Event / payload / Failure
+parser (future) -> contracts.Event / RecordError
+rendering (future) -> contracts.payload_dict
+```
