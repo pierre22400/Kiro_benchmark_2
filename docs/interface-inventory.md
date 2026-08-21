@@ -104,3 +104,12 @@ The module owns Event Order, logical-AND filters, complete severity counts, case
 operations (future) -> timeline.summarize / timeline.explain
   -> contracts.EventView / SummaryPayload / ExplainPayload / Failure
 ```
+
+
+## Text redaction (`redaction.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `redaction` → `rendering` | `redact_text_value(value)` | one already-selected text field | redacted string | none | none |
+
+Redaction applies non-overlapping email, hexadecimal identifier, then long-token replacements. It performs no filtering, lookup, I/O, or JSON rendering.
