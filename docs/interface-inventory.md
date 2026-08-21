@@ -122,3 +122,13 @@ Redaction applies non-overlapping email, hexadecimal identifier, then long-token
 | `rendering` → `cli` | `render(payload, output_format, redact=False)` | exact public payload, `text`/`json`, text-redaction flag | complete result text without final LF | none | none |
 
 JSON uses the shared payload dictionary and canonical serializer settings. Text rendering owns all declared lines. Redaction is called only by text summary/explain formatting after domain ordering.
+
+
+## Output writer (`output_writer.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `output_writer` → `cli` | `preflight_target(output_path, start_cwd)` | raw requested path, invocation start cwd | immutable `OutputPlan` | `OutputFailure(invalid-output-target)` | inspection only |
+| `output_writer` → `cli` | `write_atomic(plan, data)` | preflighted target and complete UTF-8 bytes | none | `OutputFailure(local-io|invalid-output-target)` | authorized parent creation, temporary sibling, atomic replace |
+
+Only this module has output-write capability. The CLI must preflight before input and call writing only after the full result bytes exist.
