@@ -87,3 +87,20 @@ operations (future)
        -> timestamps.normalize_timestamp
        -> contracts.Event | contracts.RecordError
 ```
+
+
+## Timeline operations (`timeline.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `timeline` → `operations` | `summarize(events, filters)` | validated Events and exact `Filters` | exact `SummaryPayload` | none | none |
+| `timeline` → `operations` | `explain(events, event_id)` | validated Events, exact event ID | exact `ExplainPayload` or `Failure(event-not-found)` | event-not-found only | none |
+
+The module owns Event Order, logical-AND filters, complete severity counts, case ordering, and local explain context. It has no input or output capability.
+
+## Updated call graph
+
+```text
+operations (future) -> timeline.summarize / timeline.explain
+  -> contracts.EventView / SummaryPayload / ExplainPayload / Failure
+```
