@@ -113,3 +113,12 @@ operations (future) -> timeline.summarize / timeline.explain
 | `redaction` → `rendering` | `redact_text_value(value)` | one already-selected text field | redacted string | none | none |
 
 Redaction applies non-overlapping email, hexadecimal identifier, then long-token replacements. It performs no filtering, lookup, I/O, or JSON rendering.
+
+
+## Rendering (`rendering.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `rendering` → `cli` | `render(payload, output_format, redact=False)` | exact public payload, `text`/`json`, text-redaction flag | complete result text without final LF | none | none |
+
+JSON uses the shared payload dictionary and canonical serializer settings. Text rendering owns all declared lines. Redaction is called only by text summary/explain formatting after domain ordering.
