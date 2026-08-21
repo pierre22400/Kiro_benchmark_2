@@ -1,0 +1,124 @@
+{
+  "title": "Evidence Timeline CLI - natural spec v2 EARS",
+  "summary": "Import-safe Python standard-library-only local CLI that reads a JSONL event log, validates records, reconstructs a deterministic timeline for each case, and produces a concise text or JSON report.",
+  "spec_version": "21/08/2026",
+  "comment_human": "Treat functional_objectives, non_functional_constraints, help_contract, behavior_contract, and architectural_objectives as the complete normative source. This SpecBlock is intentionally outside the canonical families. The prototype SHALL NOT be treated as a workspace_entity_lifecycle, workspace_dataset_lifecycle, workspace_task_lifecycle, local_forge_issue_lifecycle, or local_document_extractor_lifecycle application. It is a one-shot CLI for reading, validating, sorting, filtering, optionally redacting, and summarizing JSONL events. Add no workspace architecture, persistent database, server, network dependency, plugin system, global configuration, or cache.",
+  "target_audience": "A technical user who wants to inspect an application, audit, or incident event stream quickly without opening a database or starting a service.",
+  "deployment_context": "Local command-line execution without network access, without a server, without mandatory persistent state, and using only local text files or standard input.",
+  "input_sources": [
+    "local JSONL file containing one JSON event per line",
+    "standard input when the input path is '-'",
+    "command-line filtering and formatting arguments"
+  ],
+  "output_targets": [
+    "standard output for text reports, JSON reports, or schema diagnostics",
+    "standard error for argument, read, write, or invalid-JSON errors",
+    "optional local output file when --output is supplied"
+  ],
+  "behavior_contract": {
+    "default_behavior": {
+      "when_no_args": "print_help_and_exit_0",
+      "stdout_notes": "WHEN no arguments are supplied, THE CLI_Entrypoint SHALL emit top-level help to stdout, emit nothing to stderr, return exit code 0, and read neither a file nor stdin."
+    },
+    "expected_error_behavior": {
+      "bad_user_input": "IF the user supplies invalid arguments, an unknown option, or an unknown subcommand, THEN THE CLI_Entrypoint SHALL return exit code 2 and emit a short message to stderr without a traceback.",
+      "missing_required_input": "IF a required argument such as input or --event-id is missing for the selected command, THEN THE CLI_Entrypoint SHALL return exit code 2, emit a short message to stderr, and perform no unnecessary file or stdin read.",
+      "invalid_path_or_resource": "IF an input or output path is missing or unreadable, or a read or write operation fails, THEN THE CLI_Entrypoint SHALL return exit code 2 and emit a short message to stderr. IF a JSONL record is invalid, THEN THE selected command SHALL apply the applicable rule declared in domain_contracts.command_contracts."
+    },
+    "success_behavior": {
+      "return_code": 0,
+      "stdout": "WHEN a command completes successfully without --output, THE CLI_Entrypoint SHALL emit only the expected command result to stdout.",
+      "stderr": "WHEN a command completes successfully, THE CLI_Entrypoint SHALL emit nothing to stderr.",
+      "artifacts": "WHERE --output is supplied and the command completes successfully, THE CLI SHALL create the requested output file. WHERE --output is not supplied, THE CLI SHALL create no output artifact."
+    }
+  },
+  "help_contract": {
+    "rc_semantics": {
+      "help": 0,
+      "no_args": 0,
+      "bad_args": 2
+    },
+    "no_args_behavior": "WHEN no arguments are supplied, THE CLI_Entrypoint SHALL display top-level help without reading stdin or any file.",
+    "stable_fragments_all": [
+      "usage:",
+      "Evidence Timeline CLI",
+      "--help"
+    ],
+    "stable_fragments_any": [
+      "commands:",
+      "subcommands:",
+      "validate",
+      "summarize",
+      "explain",
+      "schema"
+    ],
+    "subcommand_fragments": {
+      "validate": [
+        "usage:",
+        "validate",
+        "input"
+      ],
+      "summarize": [
+        "usage:",
+        "summarize",
+        "input",
+        "--format",
+        "--min-severity"
+      ],
+      "explain": [
+        "usage:",
+        "explain",
+        "input",
+        "--event-id"
+      ],
+      "schema": [
+        "usage:",
+        "schema"
+      ]
+    },
+    "notes": "WHEN argparse uses wording variants such as 'options:' or 'optional arguments:', THE CLI SHALL still include the essential command fragments declared by this help_contract."
+  },
+  "functional_objectives": [
+    "THE CLI SHALL provide a validate command that checks JSONL syntax, required fields, and severity levels.",
+    "WHEN the user invokes the summarize command with valid input, THE CLI SHALL group events by case_id and produce a deterministic timeline for each case.",
+    "WHEN the user invokes the explain command with --event-id EVENT_ID, THE CLI SHALL locate the event whose event_id equals EVENT_ID and display its local context within the corresponding case timeline.",
+    "WHEN the user invokes the schema command, THE CLI SHALL display the minimum expected event contract.",
+    "WHERE a command supports event filtering, THE CLI SHALL accept the --case-id, --actor, --min-severity, and --tag filters when they are applicable to that command.",
+    "WHERE --redact is supplied, THE CLI SHALL mask email addresses, long tokens, and long hexadecimal identifiers in human-readable output.",
+    "WHEN two executions receive identical input content and identical arguments, THE CLI SHALL produce identical output.",
+    "WHEN the input operand equals '-', THE CLI SHALL read JSONL event records from stdin instead of opening a local input file.",
+    "WHEN a successful command is invoked without --output, THE CLI SHALL emit its text report, JSON report, schema diagnostic, or event context to stdout.",
+    "WHERE --output is supplied to a command that supports file output, THE CLI SHALL write the command result to the selected local output file.",
+    "IF the CLI receives an invalid argument, unknown option, unknown subcommand, missing required input, unreadable path, or local read or write failure, THEN THE CLI_Entrypoint SHALL emit a short user-readable error to stderr without traceback.",
+    "WHEN top-level help is displayed, THE CLI SHALL identify the validate, summarize, explain, and schema commands.",
+    "WHEN validate help is displayed, THE CLI SHALL include the fragments usage:, validate, and input.",
+    "WHEN summarize help is displayed, THE CLI SHALL include the fragments usage:, summarize, input, --format, and --min-severity.",
+    "WHEN explain help is displayed, THE CLI SHALL include the fragments usage:, explain, input, and --event-id.",
+    "WHEN schema help is displayed, THE CLI SHALL include the fragments usage: and schema."
+  ],
+  "non_functional_constraints": [
+    "THE CLI SHALL operate without network access.",
+    "THE CLI SHALL require no mandatory external dependency beyond the Python standard library.",
+    "WHEN any application module is imported, THE module SHALL perform no argument parsing, command execution, file read, stdin read, filesystem write, stream emission, network access, or subprocess execution.",
+    "THE CLI SHALL sort events deterministically by normalized timestamp, then case_id, then event_id.",
+    "WHEN an expected user-facing error occurs, THE CLI_Entrypoint SHALL emit a short readable message without a traceback.",
+    "WHEN JSON output is produced, THE CLI SHALL serialize object keys in sorted order wherever the selected JSON representation permits it.",
+    "THE CLI SHALL run on Windows and POSIX platforms.",
+    "WHILE any command is executing, THE CLI SHALL NOT modify the input file.",
+    "WHEN two executions receive identical input content and identical arguments, THE CLI SHALL produce equal exit codes, stdout content, stderr content, and output-file content.",
+    "WHILE a successful command result is emitted, THE CLI_Entrypoint SHALL emit no unrelated banner, debug line, progress line, log line, advisory prose, or duplicate result.",
+    "WHEN a command succeeds, THE CLI_Entrypoint SHALL return exit code 0 and emit nothing to stderr.",
+    "WHEN bad CLI arguments are detected, THE CLI_Entrypoint SHALL return exit code 2, emit the applicable short error to stderr, and emit no command result to stdout."
+  ],
+  "architectural_objectives": [
+    "THE generated architecture SHALL clearly separate the CLI surface, JSONL parsing, business validation, filtering, timeline construction, redaction, and rendering responsibilities.",
+    "THE generated architecture SHALL keep the business core testable without invoking argparse.",
+    "THE generated architecture SHALL model the prototype as a one-shot processor and SHALL NOT use a workspace architecture or persistent database.",
+    "WHEN validation, filtering, timeline construction, redaction, and rendering share event data, THE generated architecture SHALL define consistent domain contracts across those responsibilities.",
+    "THE generated architecture SHALL preserve medium complexity through multiple commands and multiple output formats and SHALL NOT introduce a plugin system, global configuration, or cache.",
+    "WHILE the CLI_Entrypoint handles an invocation, THE CLI_Entrypoint SHALL own argument parsing, help handling, domain invocation, rendering, stdout and stderr emission, and exit-code mapping without embedding the business rules of JSONL validation, filtering, timeline construction, or redaction.",
+    "WHEN an internal operation succeeds, THE internal API SHALL return a logical result and SHALL NOT emit directly to stdout or stderr.",
+    "WHEN an interface between generated modules is defined during design, THE design SHALL reconcile its inputs, returned logical value, expected failures, and filesystem effects before tasks or code are generated."
+  ],
+  "domain_contracts": {}
+}
