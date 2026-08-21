@@ -68,3 +68,22 @@ The reader owns local-file and stdin selection. It rejects a symlink target or e
 operations (future) -> input_reader.iter_input_lines -> PhysicalLine
 operations (future) -> jsonl_parser.parse_record -> contracts.Event | RecordError
 ```
+
+
+## Single-record parser (`jsonl_parser.py`)
+
+| Producer → consumer | Callable | Parameters | Return | Expected failures | Filesystem effects |
+| --- | --- | --- | --- | --- | --- |
+| `jsonl_parser` → `operations` | `parse_record(line, seen_event_ids)` | one `PhysicalLine`, mutable seen-ID set | one validated `Event` or one `RecordError` | public record codes only: `blank-line`, `invalid-json`, `invalid-event`, `duplicate-event-id` | none |
+
+The parser owns finite-JSON enforcement, exact event-key/type/enum/tag validation, timestamp normalization delegation, and first-valid-ID registration. It never reads streams or emits output.
+
+## Updated call graph
+
+```text
+operations (future)
+  -> input_reader.iter_input_lines
+  -> jsonl_parser.parse_record
+       -> timestamps.normalize_timestamp
+       -> contracts.Event | contracts.RecordError
+```
